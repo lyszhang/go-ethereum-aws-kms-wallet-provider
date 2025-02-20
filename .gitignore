@@ -8,7 +8,7 @@
 *.so
 *.dylib
 
-# Test binary, built with `go test -c`
+# Test binary, built with `go cms -c`
 *.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
@@ -45,7 +45,7 @@ lib-cov
 coverage
 *.lcov
 
-# nyc test coverage
+# nyc cms coverage
 .nyc_output
 
 # Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
@@ -155,3 +155,4 @@ dist
 *.abi
 
 .idea/
+.cms/

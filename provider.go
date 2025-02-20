@@ -83,6 +83,7 @@ type Provider interface {
 	GetWalletTransactor(ctx context.Context, keyId string, chainId *big.Int) (*bind.TransactOpts, error)
 	GetWalletCaller(ctx context.Context, keyId string, chainId *big.Int) (*bind.CallOpts, error)
 	SignMessage(ctx context.Context, keyId string, message []byte) ([]byte, error)
+	SignHashMessage(ctx context.Context, keyId string, hashedMessage []byte) ([]byte, error)
 	EnableWallet(ctx context.Context, keyId string) (*kms.EnableKeyOutput, error)
 	DisableWallet(ctx context.Context, keyId string) (*kms.DisableKeyOutput, error)
 
@@ -309,6 +310,32 @@ func (c *provider) GetWalletCallerByAlias(ctx context.Context, alias string, cha
 func (c *provider) SignMessage(ctx context.Context, keyId string, message []byte) ([]byte, error) {
 	hashedMessage := toEthSignedMessageHash(message)
 
+	rBytes, sBytes, err := c.getSignatureFromKms(ctx, keyId, hashedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	sBigInt := new(big.Int).SetBytes(sBytes)
+	if sBigInt.Cmp(secp256k1HalfN) > 0 {
+		sBytes = new(big.Int).Sub(secp256k1N, sBigInt).Bytes()
+	}
+
+	publicKey, err := c.getPublicKey(ctx, keyId)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKeyBytes := secp256k1.S256().Marshal(publicKey.X, publicKey.Y)
+	signature, err := c.getEthereumSignature(publicKeyBytes, hashedMessage, rBytes, sBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	signature[64] += 27
+	return signature, nil
+}
+
+func (c *provider) SignHashMessage(ctx context.Context, keyId string, hashedMessage []byte) ([]byte, error) {
 	rBytes, sBytes, err := c.getSignatureFromKms(ctx, keyId, hashedMessage)
 	if err != nil {
 		return nil, err
